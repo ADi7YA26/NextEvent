@@ -5,15 +5,27 @@ import { Id } from "@/convex/_generated/dataModel"
 import { useStorageUrl } from "@/lib/utils";
 import { useUser } from "@clerk/nextjs"
 import { useQuery } from "convex/react";
-import { CalendarDays, MapPin, StarIcon, Ticket } from "lucide-react";
+import { CalendarDays, Check, CircleArrowRight, LoaderCircle, MapPin, PencilIcon, StarIcon, Ticket, XCircle } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import { Button } from "./ui/button";
+import { useRouter } from "next/navigation";
 
 const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
 
   const { user } = useUser();
+  const router = useRouter();
   const event = useQuery(api.events.getById, {eventId});
   const availability = useQuery(api.events.getEventAvailability, {eventId});
+  
+  const userTicket = useQuery(api.tickets.getUserTicketForEvent, {
+    eventId,
+    userId: user?.id ?? ""
+  })
+
+  const queuePosition = useQuery(api.waitingList.getQueuePosition, {
+    eventId,
+    userId: user?.id ?? "",
+  })
 
   const imageUrl = useStorageUrl(event?.imageStorageId);
 
@@ -24,11 +36,112 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
   const isPastEvent = event.eventDate < Date.now();
   const isEventOwner = user?.id === event?.userId;
 
+  const renderQueuePosition = () => {
+    if(!queuePosition || queuePosition.status !== "waiting") return null;
+
+    if(availability.purchasedCount >= availability.totalTickets){
+      return (
+        <div className="flex items-center justify-between p-3">
+          <div className="flex items-center text-muted-foreground">
+            <Ticket className="w-5 h-5 mr-2" />
+            <span>Event is sold out</span>
+          </div>
+        </div>
+      );
+    }
+
+    if(queuePosition.position === 2){
+      return (
+        <div className="flex flex-col text-primary items-center justify-between p-3 rounded-lg border">
+          <div className="flex items-center">
+            <CircleArrowRight className="w-5 h-5 mr-2" />
+            <span className="font-medium">
+              You&apos;re next in line! (Queue Position: {" "}
+              {queuePosition.position})
+            </span>
+          </div>
+          <div className="flex items-center">
+            <LoaderCircle className="w-4 h-4 mr-1 animate-spin" />
+            <span className="text-sm">Waiting for ticket</span>
+          </div>
+        </div>
+      )
+    }
+
+    return(
+      <div className="flex items-center justify-between p-3 text-accent-foreground bg-accent rounded-lg border">
+        <div className="flex items-center">
+          <span>Queue Position</span>
+        </div>
+        <span className="px-3 py-1 rounded-full font-medium">3</span>
+      </div>
+    )
+
+  }
+
+
+  const renderTicketStatus = () => {
+    if(!user) return null;
+
+    if(isEventOwner){
+      return (
+        <div className="mt-4">
+          <Button variant="ghost" className="w-full" onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/seller/events/${eventId}/edit`)
+          }}>
+            <PencilIcon />
+            Edit Event
+          </Button>
+        </div>
+      )
+    }
+
+    if(userTicket){
+      return(
+        <div className="mt-4 flex items-center justify-between p-3 rounded-lg border">
+          <div className="flex item-center">
+            <Check className="text-green-600 mr-2" />   
+            <span className="text-green-700 font-medium">
+              You have a ticket!
+            </span>
+          </div>
+          <Button className="rounded-full bg-green-700 hover:bg-green-900"
+            onClick={(e) => {e.stopPropagation(); router.push(`/tickets/${userTicket._id}`)}}
+          >
+            View your ticket
+          </Button>
+        </div>
+      )
+    }
+
+    if(queuePosition){
+      return(
+        <div className="mt-4">
+          {queuePosition.status === "offered" && (
+            // <PurchaseTicket eventId={eventId} />
+            <div> adf </div>
+          )}
+          {renderQueuePosition()} 
+          {queuePosition.status === "expired" && (
+            <div className="p3 bg-red-50 rounded-lg border border-red-100">
+              <span className="text-red-700 font-medium flex items-center">
+                <XCircle className="w-5 h-5 mr-2" />
+                Offer expired
+              </span>
+            </div>
+          )}
+        </div>
+      )
+    }
+  }
+
   return (
-    <Link href={`/events/${eventId}`} 
-    className={`event-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border overflow-hidden relative ${
-      isPastEvent ? "opacity-75 hover:opacity-100" : ""
-    }`}
+    <div 
+      onClick={() => router.push(`/event/${eventId}`)}  
+      className={`rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border cursor-pointer overflow-hidden relative ${
+        isPastEvent ? "opacity-75 hover:opacity-100" : ""
+      }`}
     >
       {imageUrl && (
         <div className="relative w-full h-48">
@@ -74,7 +187,7 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
           </div>
         </div>
 
-        <div className="mt-4 space-y-3 text-muted-foreground">
+        <div className="mt-4 space-y-3 text-sm text-muted-foreground">
           <div className="flex items-center">
             <MapPin className="w-4 h-4 mr-2" />
             <span>{event.location}</span>
@@ -108,12 +221,12 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
           {event.description}
         </p>
 
-        {/* <div onClick={(e) => e.stopPropagation()}>
+        <div>
           {!isPastEvent && renderTicketStatus()}
-        </div> */}
+        </div>
       </div>
       
-    </Link>
+    </div>
   )
 }
 
