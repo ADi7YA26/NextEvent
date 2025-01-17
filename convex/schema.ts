@@ -35,7 +35,6 @@ export default defineSchema({
   waitingList: defineTable({
     eventId: v.id("events"),
     userId: v.string(),
-    purchasedAt: v.number(),
     status: v.union(
       v.literal("waiting"),
       v.literal("offered"),
