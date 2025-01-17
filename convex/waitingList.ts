@@ -1,6 +1,8 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { WAITING_LIST_STATUS } from "./constants";
+import { DURATIONS, WAITING_LIST_STATUS } from "./constants";
+import { getEventAvailability } from "./events";
+import { internal } from "./_generated/api";
 
 export const getQueuePosition = query({
   args: {
@@ -44,6 +46,61 @@ export const getQueuePosition = query({
   },
 })
 
+export const expireOffer = internalMutation({
+  args: {
+    waitingListId: v.id("waitingList"),
+    eventId: v.id("events")
+  },
+  handler: async (ctx, { waitingListId, eventId }) => {
+    const offer = await ctx.db.get(waitingListId);
+    if(!offer || offer.status !== WAITING_LIST_STATUS.OFFERED) return;
+
+    await ctx.db.patch(waitingListId, {
+      status: WAITING_LIST_STATUS.EXPIRED
+    });
+
+    await processQueue(ctx, { eventId });
+  }
+})
+
+// function to process waiting list queue and offer tickets to next eligible user
+// check current availability considering purchased tickets and active offers.
+export const processQueue = mutation({
+  args: {
+    eventId: v.id("events")
+  },
+  handler: async (ctx, { eventId }) => {
+    const { availableSpots } = await getEventAvailability(ctx, {eventId});
+    if(availableSpots <= 0) return;
+
+    // get next users in line
+    const waitingUsers = await ctx.db
+      .query("waitingList")
+      .withIndex("by_event_status", (q) => q.eq("eventId", eventId).eq("status", WAITING_LIST_STATUS.WAITING))
+      .order("asc")
+      .take(availableSpots);
+
+    const now = Date.now();
+    for (const user of waitingUsers) {
+      // update the waiting list entry to OFFERED
+      await ctx.db.patch(user._id, {
+        status: WAITING_LIST_STATUS.OFFERED,
+        offerExpiresAt: now + DURATIONS.TICKET_OFFER,
+      });
+
+      // schedule expiration job for this offer
+      await ctx.scheduler.runAfter(
+        DURATIONS.TICKET_OFFER,
+        internal.waitingList.expireOffer,
+        {
+          waitingListId: user._id,
+          eventId,
+        }
+      );
+    }
+  }
+})
+
 export const releaseTicket = mutation({
   args: {
     eventId: v.id("events"),
@@ -62,7 +119,6 @@ export const releaseTicket = mutation({
     })
 
     // process the queue to offer ticket to the next person
-    // await processQueue(ctx, { eventId })
-
+    await processQueue(ctx, { eventId })
   }
 })
