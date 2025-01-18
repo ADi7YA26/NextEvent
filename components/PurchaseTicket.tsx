@@ -5,21 +5,19 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { Ticket } from "lucide-react";
-import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import ReleaseTicket from "./ReleaseTicket";
 
 const PurchaseTicket = ({ eventId }: { eventId: Id<"events"> }) => {
   const { user } = useUser();
-  const router = useRouter();
   const queuePosition = useQuery(api.waitingList.getQueuePosition, {
     eventId,
     userId: user?.id ?? ""
   })
 
   const [timeRemaining, setTimeRemaining] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, ] = useState(false);
 
   const offerExpiresAt = queuePosition?.offerExpiresAt ?? 0;
   const isExpired = Date.now() > offerExpiresAt;
@@ -58,9 +56,9 @@ const PurchaseTicket = ({ eventId }: { eventId: Id<"events"> }) => {
   }
 
   return (
-    <div className="bg-card p-6 rounded-xl shadow-lg border">
+    <div className="bg-gradient-card p-6 rounded-xl shadow-lg border">
       <div className="space-y-4">
-        <div className="rounded-lg p-6 border">
+        <div className="bg-gradient-card rounded-lg p-6 border">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full flex items-center justify-center">

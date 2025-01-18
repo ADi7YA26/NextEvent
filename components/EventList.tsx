@@ -26,14 +26,14 @@ const EventList = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-start sm:items-center flex-col sm:flex-row gap-3 justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold">Upcoming Events</h1>
           <p className="mt-2 text-muted-foreground">
             Discover & book tickets for amazing events
           </p>
         </div>
-        <div className="bg-card px-4 py-2 rounded-lg shadow-sm border">
+        <div className="bg-gradient-card px-4 py-2 rounded-lg shadow-sm border">
           <div className="flex items-center gap-2 text-muted-foreground">
             <CalendarDays className="w-5 h-5" />
             <span>

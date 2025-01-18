@@ -9,14 +9,15 @@ import { CalendarDays, Check, CircleArrowRight, LoaderCircle, MapPin, PencilIcon
 import Image from "next/image";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
+import PurchaseTicket from "./PurchaseTicket";
 
-const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
+const EventCard = ({ eventId }: { eventId: Id<"events"> }) => {
 
   const { user } = useUser();
   const router = useRouter();
-  const event = useQuery(api.events.getById, {eventId});
-  const availability = useQuery(api.events.getEventAvailability, {eventId});
-  
+  const event = useQuery(api.events.getById, { eventId });
+  const availability = useQuery(api.events.getEventAvailability, { eventId });
+
   const userTicket = useQuery(api.tickets.getUserTicketForEvent, {
     eventId,
     userId: user?.id ?? ""
@@ -29,17 +30,17 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
 
   const imageUrl = useStorageUrl(event?.imageStorageId);
 
-  if(!event || !availability){
+  if (!event || !availability) {
     return null;
   }
-  
+
   const isPastEvent = event.eventDate < Date.now();
   const isEventOwner = user?.id === event?.userId;
 
   const renderQueuePosition = () => {
-    if(!queuePosition || queuePosition.status !== "waiting") return null;
+    if (!queuePosition || queuePosition.status !== "waiting") return null;
 
-    if(availability.purchasedCount >= availability.totalTickets){
+    if (availability.purchasedCount >= availability.totalTickets) {
       return (
         <div className="flex items-center justify-between p-3">
           <div className="flex items-center text-muted-foreground">
@@ -50,7 +51,7 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
       );
     }
 
-    if(queuePosition.position === 2){
+    if (queuePosition.position === 2) {
       return (
         <div className="flex flex-col text-primary items-center justify-between p-3 rounded-lg border">
           <div className="flex items-center">
@@ -68,7 +69,7 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
       )
     }
 
-    return(
+    return (
       <div className="flex items-center justify-between p-3 text-accent-foreground bg-accent rounded-lg border">
         <div className="flex items-center">
           <span>Queue Position</span>
@@ -81,9 +82,9 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
 
 
   const renderTicketStatus = () => {
-    if(!user) return null;
+    if (!user) return null;
 
-    if(isEventOwner){
+    if (isEventOwner) {
       return (
         <div className="mt-4">
           <Button variant="ghost" className="w-full" onClick={(e) => {
@@ -97,17 +98,17 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
       )
     }
 
-    if(userTicket){
-      return(
+    if (userTicket) {
+      return (
         <div className="mt-4 flex items-center justify-between p-3 rounded-lg border">
-          <div className="flex item-center">
-            <Check className="text-green-600 mr-2" />   
-            <span className="text-green-700 font-medium">
+          <div className="text-success flex item-center">
+            <Check className="mr-2" />
+            <span className="font-medium">
               You have a ticket!
             </span>
           </div>
-          <Button className="rounded-full bg-green-700 hover:bg-green-900"
-            onClick={(e) => {e.stopPropagation(); router.push(`/tickets/${userTicket._id}`)}}
+          <Button variant="success" className="rounded-full"
+            onClick={(e) => { e.stopPropagation(); router.push(`/tickets/${userTicket._id}`) }}
           >
             View your ticket
           </Button>
@@ -115,17 +116,16 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
       )
     }
 
-    if(queuePosition){
-      return(
+    if (queuePosition) {
+      return (
         <div className="mt-4">
           {queuePosition.status === "offered" && (
-            // <PurchaseTicket eventId={eventId} />
-            <div> adf </div>
+            <PurchaseTicket eventId={eventId} />
           )}
-          {renderQueuePosition()} 
+          {renderQueuePosition()}
           {queuePosition.status === "expired" && (
-            <div className="p3 bg-red-50 rounded-lg border border-red-100">
-              <span className="text-red-700 font-medium flex items-center">
+            <div className="p-3 bg-destructive-foreground rounded-lg border">
+              <span className="text-destructive font-medium flex items-center">
                 <XCircle className="w-5 h-5 mr-2" />
                 Offer expired
               </span>
@@ -137,11 +137,10 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
   }
 
   return (
-    <div 
-      onClick={() => router.push(`/event/${eventId}`)}  
-      className={`rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border cursor-pointer overflow-hidden relative ${
-        isPastEvent ? "opacity-75 hover:opacity-100" : ""
-      }`}
+    <div
+      onClick={() => router.push(`/event/${eventId}`)}
+      className={`bg-gradient-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border cursor-pointer overflow-hidden relative ${isPastEvent ? "opacity-75 hover:opacity-100" : ""
+        }`}
     >
       {imageUrl && (
         <div className="relative w-full h-48">
@@ -149,7 +148,7 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
         </div>
       )}
-      
+
       <div className={`p-6 ${imageUrl ? "relative" : ""}`}>
         <div className="flex justify-between items-start">
 
@@ -174,13 +173,13 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
               className={`px-4 py-1.5 text-sm font-semibold rounded-full ${
                 isPastEvent
                   ? "bg-secondary text-secondary-foreground"
-                  : "bg-green-50 text-green-700"
+                  : "bg-success/10 border border-success/20 text-success"
               }`}
             >
               ₹{event.price.toFixed(2)}
             </span>
             {availability.purchasedCount >= availability.totalTickets && (
-              <span className="px-4 py-1.5 bg-destructive text-destructive-foreground font-semibold rounded-full text-sm">
+              <span className="px-2 py-1.5 min-w-24 text-center bg-destructive text-destructive-foreground font-semibold rounded-full text-sm">
                 Sold Out
               </span>
             )}
@@ -225,7 +224,7 @@ const EventCard = ( {eventId}  : { eventId: Id<"events">}) => {
           {!isPastEvent && renderTicketStatus()}
         </div>
       </div>
-      
+
     </div>
   )
 }
